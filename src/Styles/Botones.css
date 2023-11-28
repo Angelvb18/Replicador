@@ -1,0 +1,123 @@
+
+.boton_1{
+    height: 1%;
+    width: 85%;
+    margin: 2%;
+    margin-top: 5%;
+    border-radius: 15px;
+    background-color: crimson;   
+    border: none;
+}
+.boton_1:hover{
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgb(199, 199,199);
+}
+
+.boton_1 p{
+    color: white;
+    font-size: 20px;
+    margin-top: 13px;
+}
+.boton_2{
+    height: 1%;
+    width: 85%;
+    margin: 2%;
+    margin-top: 5%;
+    border-radius: 15px;
+    background-color: rgb(127, 255, 150);
+    border: none;
+}
+.boton_2:hover{
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgb(199, 199,199);
+}
+
+.boton_2 p{
+    color: rgb(65, 64, 64);
+    font-size: 20px;
+    margin-top: 13px;
+}
+
+.boton_3{
+    height: 1%;
+    width: 85%;
+    margin: 2%;
+    margin-top: 5%;
+    border-radius: 15px;
+    background-color: rgb(234, 213, 58);
+    border: none;
+}
+.boton_3:hover{
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgb(199, 199,199);
+}
+
+.boton_3 p{
+    color: rgb(64, 81, 25);
+    font-size: 20px;
+    margin-top: 13px;
+}
+
+.boton_4{
+    height: 1%;
+    width: 85%;
+    margin: 2%;
+    margin-top: 5%;
+    border-radius: 15px;
+    background-color: rgb(58, 131, 234);
+    border: none;
+}
+.boton_4:hover{
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgb(199, 199,199);
+}
+
+.boton_4 p{
+    color: rgb(226, 228, 220);
+    font-size: 20px;
+    margin-top: 13px;
+}
+
+.boton_5{
+    height: 1%;
+    width: 85%;
+    margin: 2%;
+    margin-top: 5%;
+    border-radius: 15px;
+    background-color: rgb(41, 129, 14);
+    border: none;
+}
+.boton_5:hover{
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgb(199, 199,199);
+}
+
+.boton_5 p{
+    color: rgb(226, 228, 220);
+    font-size: 20px;
+    margin-top: 13px;
+}
+
+.boton_6{
+    height: 1%;
+    width: 85%;
+    margin: 2%;
+    margin-top: 5%;
+    border-radius: 15px;
+    background-color: rgb(12, 29, 216);
+    border: none;
+}
+.boton_6:hover{
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgb(199, 199,199);
+}
+
+.boton_6 p{
+    color: rgb(226, 228, 220);
+    font-size: 20px;
+    margin-top: 13px;
+}
+
+.h_admin{
+    color: azure;
+}
