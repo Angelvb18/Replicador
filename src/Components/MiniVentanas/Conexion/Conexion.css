@@ -1,0 +1,18 @@
+.Conection_Space {
+    background-color: rgb(228, 232, 232);
+    width: 60%;
+    height: 60%;
+    margin-top: 4%;
+    margin-left: auto;  /* Añade margen izquierdo automático */
+    margin-right: auto; /* Añade margen derecho automático */
+    justify-content: center;
+    display: flex;
+    flex-direction: row;
+}
+
+.connection_container {
+    align-items: center;
+    justify-content: center;
+    flex-direction: row;
+    height: 100%;        
+}
