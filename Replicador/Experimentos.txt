@@ -1,0 +1,250 @@
+DROP database hola;
+CREATE TABLE IF NOT EXISTS bitacora (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    executedSQL TEXT,
+    reverseSQL TEXT
+);
+-- Crear el evento manualmente
+-- Crear el evento manualmente
+
+
+DELIMITER //
+
+-- Función para ejecutar consultas dinámicas
+CREATE PROCEDURE IF NOT EXISTS my_exec(IN query VARCHAR(500))
+BEGIN
+    -- Asegúrate de validar y escapar adecuadamente los nombres de tablas y columnas si provienen de entradas externas.
+    SET @query = query;
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END;
+
+//
+CREATE EVENT IF NOT EXISTS check_and_create_triggers
+ON SCHEDULE EVERY 1 MINUTE
+DO
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE tableName VARCHAR(255);
+    DECLARE createTriggerQuery VARCHAR(500);
+
+    DECLARE curTables CURSOR FOR 
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'hola' AND table_name != 'bitacora';
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN curTables;
+
+    check_tables: LOOP
+        FETCH curTables INTO tableName;
+        IF done THEN
+            LEAVE check_tables;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM information_schema.triggers
+            WHERE event_object_schema = 'hola' AND event_object_table = tableName
+        ) THEN
+            SET createTriggerQuery = CONCAT(
+				    'CREATE TRIGGER ', tableName, '_trigger AFTER INSERT, DELETE, UPDATE ON ', tableName, 
+				    ' FOR EACH ROW BEGIN INSERT INTO hola.bitacora (id, consulta, timestamp, nombre_tabla) VALUES (NEW.id, "INSERT/DELETE/UPDATE", NOW(), "', tableName, '"); END;'
+				);
+				
+				CALL my_exec(createTriggerQuery);
+
+
+        END IF;
+    END LOOP;
+
+    CLOSE curTables;
+END;
+//
+DELIMITER ;
+DELIMITER //
+
+CREATE TRIGGER usuarios_after_insert_trigger
+AFTER INSERT ON usuarios
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (executedSQL, reverseSQL)
+    VALUES (
+        CONCAT('INSERT INTO usuarios (id, nombre, carrera) VALUES (', NEW.id, ', "', NEW.nombre, '", "', NEW.carrera, '");'),
+        CONCAT('DELETE FROM usuarios WHERE id = ', NEW.id, ';')
+    );
+END;
+
+//
+DELIMITER ;
+
+
+
+
+
+
+
+-- Ejecutar el evento
+ALTER EVENT hola.check_and_create_triggers ENABLE;
+
+
+
+-- Insertar datos de prueba
+
+CREATE TABLE usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(255),
+    carrera VARCHAR(255)
+);
+
+
+
+-- Insertar un nuevo usuario
+INSERT INTO usuarios (nombre, carrera) VALUES ('Juan', 'Ingeniería');
+
+-- Actualizar un usuario existente
+UPDATE usuarios SET carrera = 'Medicina' WHERE id = 1;
+
+-- Eliminar un usuario
+DELETE FROM usuarios WHERE id = 1;
+
+-- Verificar la tabla bitacora
+SELECT * FROM hola.bitacora;
+
+SHOW events FROM hola;
+SHOW triggers FROM hola;
+SHOW VARIABLES LIKE 'event_scheduler';
+SET GLOBAL event_scheduler = ON;
+
+
+-- Crear la base de datos
+CREATE DATABASE IF NOT EXISTS mi_base_de_datos;
+USE mi_base_de_datos;
+
+-- Crear la tabla para auditar
+CREATE TABLE IF NOT EXISTS tabla_auditar (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50),
+    descripcion TEXT
+);
+
+-- Crear la tabla de bitácora
+CREATE TABLE IF NOT EXISTS bitacora (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    consulta TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Crear el disparador de auditoría para INSERT
+DELIMITER //
+CREATE TRIGGER bitacora_audit_insert
+AFTER INSERT ON mi_base_de_datos.tabla_auditar
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (consulta) VALUES (CONCAT('INSERT INTO tabla_auditar VALUES (', NEW.nombre, ', ', NEW.descripcion, ');'));
+END;
+//
+
+-- Crear el disparador de auditoría para UPDATE
+DELIMITER //
+CREATE TRIGGER bitacora_audit_update
+AFTER UPDATE ON mi_base_de_datos.tabla_auditar
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (consulta) VALUES (CONCAT('UPDATE tabla_auditar SET descripcion = ', NEW.descripcion, ' WHERE id = ', NEW.id, ';'));
+END;
+//
+
+-- Crear el disparador de auditoría para DELETE
+DELIMITER //
+CREATE TRIGGER bitacora_audit_delete
+AFTER DELETE ON mi_base_de_datos.tabla_auditar
+FOR EACH ROW
+BEGIN
+    INSERT INTO bitacora (consulta) VALUES (CONCAT('DELETE FROM tabla_auditar WHERE id = ', OLD.id, ';'));
+END;
+//
+
+DELIMITER ;
+
+-- Insertar datos de prueba
+INSERT INTO tabla_auditar (nombre, descripcion) VALUES ('Ejemplo 1', 'Descripción 1');
+INSERT INTO tabla_auditar (nombre, descripcion) VALUES ('Ejemplo 2', 'Descripción 2');
+
+-- Actualizar datos de prueba
+UPDATE tabla_auditar SET descripcion = 'Descripción actualizada' WHERE id = 1;
+
+-- Eliminar datos de prueba
+DELETE FROM tabla_auditar WHERE id = 2;
+
+-- Verificar la tabla de bitácora
+SELECT * FROM bitacora;
+
+
+-- Crear el procedimiento almacenado para generar triggers de auditoría
+DELIMITER //
+
+CREATE PROCEDURE crear_trigger_auditoria(IN tabla VARCHAR(255))
+BEGIN
+    SET @trigger_name = CONCAT('bitacora_audit_', tabla, '_insert');
+    SET @query = CONCAT(
+        'CREATE TRIGGER ', @trigger_name,
+        ' AFTER INSERT ON ', tabla,
+        ' FOR EACH ROW BEGIN',
+        ' INSERT INTO bitacora (consulta) VALUES (CONCAT(\'INSERT INTO ', tabla, ' VALUES (\', NEW.nombre, \', \', NEW.descripcion, \');\'));',
+        ' END;'
+    );
+    PREPARE stmt FROM @query;
+    EXECUTE stmt;
+    DEALLOCATE PREPARE stmt;
+END;
+//
+
+-- Crear el evento para detectar nuevas tablas
+CREATE EVENT IF NOT EXISTS crear_trigger_event
+ON SCHEDULE EVERY 1 DAY
+DO
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE tabla_name VARCHAR(255);
+    DECLARE cur CURSOR FOR
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'mi_base_de_datos'; -- Reemplaza 'mi_base_de_datos' con tu nombre de base de datos
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+
+    OPEN cur;
+    read_loop: LOOP
+        FETCH cur INTO tabla_name;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        -- Verificar si el trigger ya existe antes de crearlo
+        IF NOT EXISTS (SELECT 1 FROM information_schema.triggers WHERE trigger_name = CONCAT('bitacora_audit_', tabla_name, '_insert')) THEN
+            CALL crear_trigger_auditoria(tabla_name);
+        END IF;
+    END LOOP;
+    CLOSE cur;
+END;
+//
+
+DELIMITER ;
+ALTER EVENT crear_trigger_event ON SCHEDULE EVERY 5 SECOND
+DROP TABLE Usuarios
+
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(50),
+    descripcion TEXT
+);
+INSERT INTO usuarios (nombre, descripcion) VALUES ('Usuario1', 'Descripción del usuario 1');
+INSERT INTO usuarios (nombre, descripcion) VALUES ('Usuario2', 'Descripción del usuario 2');
+SELECT * FROM bitacora;
+
+
+
